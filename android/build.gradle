@@ -2,14 +2,13 @@ group 'saad.farhan.flutter_facebook_sdk'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = '1.3.50'
+    ext.kotlin_version = '1.7.20' // Update with the latest stable Kotlin version
     repositories {
         google()
-        jcenter()
+        mavenCentral() // Remove jcenter() as it's deprecated
     }
-
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.5.0'
+        classpath 'com.android.tools.build:gradle:7.1.2' // Update to the latest compatible version
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -17,8 +16,8 @@ buildscript {
 rootProject.allprojects {
     repositories {
         google()
-        jcenter()
         mavenCentral()
+        // Remove jcenter() as it's deprecated
     }
 }
 
@@ -26,13 +25,15 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdkVersion 29
+    compileSdkVersion 33 // Update to the latest recommended SDK version
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
     }
+
     defaultConfig {
-        minSdkVersion 16
+        minSdkVersion 21 // Update minimum supported SDK version based on your requirements
+        targetSdkVersion 33
     }
     lintOptions {
         disable 'InvalidPackage'
@@ -40,6 +41,6 @@ android {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation 'com.facebook.android:facebook-android-sdk:[5,6)'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version" // Update to jdk8 for broader compatibility
+    implementation 'com.facebook.android:facebook-android-sdk:[8,9)' // Check Facebook SDK documentation for the latest compatible version range
 }
