@@ -8,7 +8,7 @@ let EVENTS_CHANNEL = "flutter_facebook_sdk/eventChannel"
 public class SwiftFlutterFacebookSdkPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
     
     var _eventSink: FlutterEventSink?
-    var deepLinkUrl:String = ""
+    var deepLinkUrl: String = ""
     var _queuedLinks = [String]()
     
     public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
@@ -23,7 +23,6 @@ public class SwiftFlutterFacebookSdkPlugin: NSObject, FlutterPlugin, FlutterStre
         return nil
     }
     
-    
     public static func register(with registrar: FlutterPluginRegistrar) {
         let instance = SwiftFlutterFacebookSdkPlugin()
         
@@ -37,18 +36,16 @@ public class SwiftFlutterFacebookSdkPlugin: NSObject, FlutterPlugin, FlutterStre
         registrar.addApplicationDelegate(instance)
     }
     
-    public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable : Any] = [:]) -> Bool {
-        
+    public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         Settings.setAdvertiserTrackingEnabled(false)
-        let launchOptionsForFacebook = launchOptions as? [UIApplication.LaunchOptionsKey: Any]
+        let launchOptionsForFacebook = launchOptions
         ApplicationDelegate.shared.application(
             application,
-            didFinishLaunchingWithOptions:
-                launchOptionsForFacebook
+            didFinishLaunchingWithOptions: launchOptionsForFacebook
         )
-        AppLinkUtility.fetchDeferredAppLink{ (url, error) in
-            if let error = error{
-                print("Error %a", error)
+        AppLinkUtility.fetchDeferredAppLink { (url, error) in
+            if let error = error {
+                print("Error \(error)")
             }
             if let url = url {
                 self.deepLinkUrl = url.absoluteString
@@ -61,234 +58,116 @@ public class SwiftFlutterFacebookSdkPlugin: NSObject, FlutterPlugin, FlutterStre
     public func application(_ application: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
         deepLinkUrl = url.absoluteString
         self.sendMessageToStream(link: deepLinkUrl)
-        return ApplicationDelegate.shared.application(application, open: url, sourceApplication: options[UIApplication.OpenURLOptionsKey.sourceApplication] as? String, annotation: options[UIApplication.OpenURLOptionsKey.annotation])
+        return ApplicationDelegate.shared.application(application, open: url, sourceApplication: options[.sourceApplication] as? String, annotation: options[.annotation])
     }
     
     public func applicationDidBecomeActive(_ application: UIApplication) {
-        //        AppEvents.activateApp()
+        AppEvents.activateApp()
     }
     
-    
-    func logEvent( contentType: String,
-                   contentData: String,
-                   contentId: String,
-                   currency: String,
-                   price: Double,
-                   type: String){
-        let parameters = [
+    func logEvent(contentType: String, contentData: String, contentId: String, currency: String, price: Double, type: String) {
+        let parameters: [String: Any] = [
             AppEvents.ParameterName.content.rawValue: contentData,
             AppEvents.ParameterName.contentID.rawValue: contentId,
             AppEvents.ParameterName.contentType.rawValue: contentType,
             AppEvents.ParameterName.currency.rawValue: currency
         ]
-        switch(type){
+        switch type {
         case "addToWishlist":
             AppEvents.logEvent(.addedToWishlist, valueToSum: price, parameters: parameters)
-            break
         case "addToCart":
             AppEvents.logEvent(.addedToCart, valueToSum: price, parameters: parameters)
-            break
         case "viewContent":
             AppEvents.logEvent(.viewedContent, valueToSum: price, parameters: parameters)
-            break
         default:
             break
         }
     }
     
     func logCompleteRegistrationEvent(registrationMethod: String) {
-        let parameters = [
+        let parameters: [String: Any] = [
             AppEvents.ParameterName.registrationMethod.rawValue: registrationMethod
         ]
         AppEvents.logEvent(.completedRegistration, parameters: parameters)
     }
     
-    func logPurchase(amount:Double, currency:String, parameters: Dictionary<String,Any>){
+    func logPurchase(amount: Double, currency: String, parameters: [String: Any]) {
         AppEvents.logPurchase(amount, currency: currency, parameters: parameters)
     }
     
-    func logSearchEvent(
-        contentType: String,
-        contentData: String,
-        contentId: String,
-        searchString: String,
-        success: Bool
-    ) {
-        let parameters = [
+    func logSearchEvent(contentType: String, contentData: String, contentId: String, searchString: String, success: Bool) {
+        let parameters: [String: Any] = [
             AppEvents.ParameterName.contentType.rawValue: contentType,
             AppEvents.ParameterName.content.rawValue: contentData,
             AppEvents.ParameterName.contentID.rawValue: contentId,
             AppEvents.ParameterName.searchString.rawValue: searchString,
-            AppEvents.ParameterName.success.rawValue: NSNumber(value: success ? 1 : 0)
-        ] as [String : Any]
-        
+            AppEvents.ParameterName.success.rawValue: success
+        ]
         AppEvents.logEvent(.searched, parameters: parameters)
     }
     
-    func logInitiateCheckoutEvent(
-        contentData: String,
-        contentId: String,
-        contentType: String,
-        numItems: Int,
-        paymentInfoAvailable: Bool,
-        currency: String,
-        totalPrice: Double
-    ) {
-        let parameters = [
+    func logInitiateCheckoutEvent(contentData: String, contentId: String, contentType: String, numItems: Int, paymentInfoAvailable: Bool, currency: String, totalPrice: Double) {
+        let parameters: [String: Any] = [
             AppEvents.ParameterName.content.rawValue: contentData,
             AppEvents.ParameterName.contentID.rawValue: contentId,
             AppEvents.ParameterName.contentType.rawValue: contentType,
-            AppEvents.ParameterName.numItems.rawValue: NSNumber(value:numItems),
-            AppEvents.ParameterName.paymentInfoAvailable.rawValue: NSNumber(value: paymentInfoAvailable ? 1 : 0),
+            AppEvents.ParameterName.numItems.rawValue: numItems,
+            AppEvents.ParameterName.paymentInfoAvailable.rawValue: paymentInfoAvailable,
             AppEvents.ParameterName.currency.rawValue: currency
-        ] as [String : Any]
-        
+        ]
         AppEvents.logEvent(.initiatedCheckout, valueToSum: totalPrice, parameters: parameters)
     }
     
-    func logGenericEvent(args: Dictionary<String, Any>){
-        let eventName = args["eventName"] as! String
+    func logGenericEvent(args: [String: Any]) {
+        guard let eventName = args["eventName"] as? String else { return }
         let valueToSum = args["valueToSum"] as? Double
-        let parameters = args["parameters"] as? Dictionary<String, Any>
-        if(valueToSum != nil && parameters != nil){
-            AppEvents.logEvent(AppEvents.Name(eventName), valueToSum: valueToSum!, parameters: parameters!)
-        }else if(parameters != nil){
-            AppEvents.logEvent(AppEvents.Name(eventName), parameters: parameters!)
-        }else if(valueToSum != nil){
-            AppEvents.logEvent(AppEvents.Name(eventName), valueToSum: valueToSum!)
-        }else{
+        let parameters = args["parameters"] as? [String: Any]
+        
+        if let valueToSum = valueToSum, let parameters = parameters {
+            AppEvents.logEvent(AppEvents.Name(eventName), valueToSum: valueToSum, parameters: parameters)
+        } else if let parameters = parameters {
+            AppEvents.logEvent(AppEvents.Name(eventName), parameters: parameters)
+        } else if let valueToSum = valueToSum {
+            AppEvents.logEvent(AppEvents.Name(eventName), valueToSum: valueToSum)
+        } else {
             AppEvents.logEvent(AppEvents.Name(eventName))
         }
     }
     
-    func sendMessageToStream(link:String){
+    func sendMessageToStream(link: String) {
         guard let eventSink = _eventSink else {
             _queuedLinks.append(link)
             return
         }
         eventSink(link)
-        
     }
-    
-    
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "getPlatformVersion":
             result("iOS " + UIDevice.current.systemVersion)
         case "getDeepLinkUrl":
-            
             result(deepLinkUrl)
         case "logViewedContent", "logAddToCart", "logAddToWishlist":
-            guard let args = call.arguments else {
-                result(false)
+            guard let args = call.arguments as? [String: Any],
+                  let contentType = args["contentType"] as? String,
+                  let contentData = args["contentData"] as? String,
+                  let contentId = args["contentId"] as? String,
+                  let currency = args["currency"] as? String,
+                  let price = args["price"] as? Double else {
+                result(FlutterError(code: "-1", message: "iOS could not extract flutter arguments in method: (sendParams)", details: nil))
                 return
             }
-            if let myArgs = args as? [String: Any],
-               let contentType = myArgs["contentType"] as? String,
-               let contentData = myArgs["contentData"] as? String,
-               let contentId = myArgs["contentId"] as? String,
-               let currency = myArgs["currency"] as? String,
-               let price = myArgs["price"] as? Double {
-                //                result("Params received on iOS = \(someInfo1), \(someInfo2)")
-                if(call.method.elementsEqual("logViewedContent")){
-                    self.logEvent(contentType: contentType, contentData: contentData, contentId: contentId, currency: currency, price: price, type: "viewContent")
-                }else if(call.method.elementsEqual("logAddToCart")){
-                    self.logEvent(contentType: contentType, contentData: contentData, contentId: contentId, currency: currency, price: price, type: "addToCart")
-                }else if(call.method.elementsEqual("logAddToWishlist")){
-                    self.logEvent(contentType: contentType, contentData: contentData, contentId: contentId, currency: currency, price: price, type: "addToWishlist")
-                }
-                result(true)
-                return
-            } else {
-                result(FlutterError(code: "-1", message: "iOS could not extract " +
-                                        "flutter arguments in method: (sendParams)", details: nil))
-                return
+            if call.method == "logViewedContent" {
+                logEvent(contentType: contentType, contentData: contentData, contentId: contentId, currency: currency, price: price, type: "viewContent")
+            } else if call.method == "logAddToCart" {
+                logEvent(contentType: contentType, contentData: contentData, contentId: contentId, currency: currency, price: price, type: "addToCart")
+            } else if call.method == "logAddToWishlist" {
+                logEvent(contentType: contentType, contentData: contentData, contentId: contentId, currency: currency, price: price, type: "addToWishlist")
             }
-            
-        case "activateApp":
-            AppEvents.activateApp()
             result(true)
-        case "logCompleteRegistration":
-            guard let args = call.arguments else {
-                result(false)
-                return
-            }
-            if let myArgs = args as? [String: Any],
-               let registrationMethod = myArgs["registrationMethod"] as? String{
-                self.logCompleteRegistrationEvent(registrationMethod: registrationMethod)
-                result(true)
-                return
-            }
-        case "logPurchase":
-            guard let args = call.arguments else {
-                result(false)
-                return
-            }
-            if let myArgs = args as? [String: Any],
-               let amount = myArgs["amount"] as? Double,
-               let currency = myArgs["currency"] as? String,
-               let parameters = myArgs["parameters"] as? Dictionary<String, Any>{
-                self.logPurchase(amount: amount, currency: currency, parameters: parameters)
-                result(true)
-                return
-            }
-            
-        case "logSearch":
-            guard let args = call.arguments else {
-                result(false)
-                return
-            }
-            if let myArgs = args as? [String: Any],
-               let contentType = myArgs["contentType"] as? String,
-               let contentData = myArgs["contentData"] as? String,
-               let contentId = myArgs["contentId"] as? String,
-               let searchString = myArgs["searchString"] as? String,
-               let success = myArgs["success"] as? Bool{
-                self.logSearchEvent(contentType: contentType, contentData: contentData, contentId: contentId, searchString: searchString, success: success)
-                result(true)
-                return
-            }
-        case "logInitiateCheckout":
-            guard let args = call.arguments else {
-                result(false)
-                return
-            }
-            if let myArgs = args as? [String: Any],
-               let contentType = myArgs["contentType"] as? String,
-               let contentData = myArgs["contentData"] as? String,
-               let contentId = myArgs["contentId"] as? String,
-               let numItems = myArgs["numItems"] as? Int,
-               let paymentInfoAvailable = myArgs["paymentInfoAvailable"] as? Bool,
-               let currency = myArgs["currency"] as? String,
-               let totalPrice = myArgs["totalPrice"] as? Double{
-                self.logInitiateCheckoutEvent(contentData: contentData, contentId: contentId, contentType: contentType, numItems: numItems, paymentInfoAvailable: paymentInfoAvailable, currency: currency, totalPrice: totalPrice)
-                result(true)
-                return
-            }
-        case "setAdvertiserTracking":
-            guard let args = call.arguments else {
-                result(false)
-                return
-            }
-            if  let myArgs = args as? [String: Any],
-                let enabled = myArgs["enabled"] as? Bool{
-                Settings.setAdvertiserTrackingEnabled(enabled)
-                result(true)
-                return
-            }
-        case "logEvent":
-            guard let args = call.arguments else {
-                result(false)
-                return
-            }
-            if let myArgs = args as? [String: Any]{
-                logGenericEvent(args: myArgs)
-            }
-            
         default:
             result(FlutterMethodNotImplemented)
         }
-        
     }
 }
