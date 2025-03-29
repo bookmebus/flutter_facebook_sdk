@@ -32,6 +32,7 @@ android {
         main.java.srcDirs += 'src/main/kotlin'
     }
     defaultConfig {
+        compileSdkVersion 34
         minSdkVersion 16
     }
     lintOptions {
