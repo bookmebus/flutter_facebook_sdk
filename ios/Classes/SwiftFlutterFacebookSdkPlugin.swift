@@ -37,7 +37,7 @@ public class SwiftFlutterFacebookSdkPlugin: NSObject, FlutterPlugin, FlutterStre
     }
     
     public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        Settings.setAdvertiserTrackingEnabled(false)
+        Settings.shared.isAdvertiserTrackingEnabled = false
         let launchOptionsForFacebook = launchOptions
         ApplicationDelegate.shared.application(
             application,
@@ -62,60 +62,64 @@ public class SwiftFlutterFacebookSdkPlugin: NSObject, FlutterPlugin, FlutterStre
     }
     
     public func applicationDidBecomeActive(_ application: UIApplication) {
-        AppEvents.activateApp()
+        AppEvents.shared.activateApp()
     }
     
     func logEvent(contentType: String, contentData: String, contentId: String, currency: String, price: Double, type: String) {
-        let parameters: [String: Any] = [
-            AppEvents.ParameterName.content.rawValue: contentData,
-            AppEvents.ParameterName.contentID.rawValue: contentId,
-            AppEvents.ParameterName.contentType.rawValue: contentType,
-            AppEvents.ParameterName.currency.rawValue: currency
+        let parameters: [AppEvents.ParameterName: Any] = [
+            .content: contentData,
+            .contentID: contentId,
+            .contentType: contentType,
+            .currency: currency
         ]
         switch type {
         case "addToWishlist":
-            AppEvents.logEvent(.addedToWishlist, valueToSum: price, parameters: parameters)
+            AppEvents.shared.logEvent(.addedToWishlist, valueToSum: price, parameters: parameters)
         case "addToCart":
-            AppEvents.logEvent(.addedToCart, valueToSum: price, parameters: parameters)
+            AppEvents.shared.logEvent(.addedToCart, valueToSum: price, parameters: parameters)
         case "viewContent":
-            AppEvents.logEvent(.viewedContent, valueToSum: price, parameters: parameters)
+            AppEvents.shared.logEvent(.viewedContent, valueToSum: price, parameters: parameters)
         default:
             break
         }
     }
     
     func logCompleteRegistrationEvent(registrationMethod: String) {
-        let parameters: [String: Any] = [
-            AppEvents.ParameterName.registrationMethod.rawValue: registrationMethod
+        let parameters: [AppEvents.ParameterName: Any] = [
+            .registrationMethod: registrationMethod
         ]
-        AppEvents.logEvent(.completedRegistration, parameters: parameters)
+        AppEvents.shared.logEvent(.completedRegistration, parameters: parameters)
     }
     
     func logPurchase(amount: Double, currency: String, parameters: [String: Any]) {
-        AppEvents.logPurchase(amount, currency: currency, parameters: parameters)
+        var convertedParams: [AppEvents.ParameterName: Any] = [:]
+        for (key, value) in parameters {
+            convertedParams[AppEvents.ParameterName(key)] = value
+        }
+        AppEvents.shared.logPurchase(amount, currency: currency, parameters: convertedParams)
     }
     
     func logSearchEvent(contentType: String, contentData: String, contentId: String, searchString: String, success: Bool) {
-        let parameters: [String: Any] = [
-            AppEvents.ParameterName.contentType.rawValue: contentType,
-            AppEvents.ParameterName.content.rawValue: contentData,
-            AppEvents.ParameterName.contentID.rawValue: contentId,
-            AppEvents.ParameterName.searchString.rawValue: searchString,
-            AppEvents.ParameterName.success.rawValue: success
+        let parameters: [AppEvents.ParameterName: Any] = [
+            .contentType: contentType,
+            .content: contentData,
+            .contentID: contentId,
+            .searchString: searchString,
+            .success: NSNumber(value: success)
         ]
-        AppEvents.logEvent(.searched, parameters: parameters)
+        AppEvents.shared.logEvent(.searched, parameters: parameters)
     }
     
     func logInitiateCheckoutEvent(contentData: String, contentId: String, contentType: String, numItems: Int, paymentInfoAvailable: Bool, currency: String, totalPrice: Double) {
-        let parameters: [String: Any] = [
-            AppEvents.ParameterName.content.rawValue: contentData,
-            AppEvents.ParameterName.contentID.rawValue: contentId,
-            AppEvents.ParameterName.contentType.rawValue: contentType,
-            AppEvents.ParameterName.numItems.rawValue: numItems,
-            AppEvents.ParameterName.paymentInfoAvailable.rawValue: paymentInfoAvailable,
-            AppEvents.ParameterName.currency.rawValue: currency
+        let parameters: [AppEvents.ParameterName: Any] = [
+            .content: contentData,
+            .contentID: contentId,
+            .contentType: contentType,
+            .numItems: NSNumber(value: numItems),
+            .paymentInfoAvailable: NSNumber(value: paymentInfoAvailable),
+            .currency: currency
         ]
-        AppEvents.logEvent(.initiatedCheckout, valueToSum: totalPrice, parameters: parameters)
+        AppEvents.shared.logEvent(.initiatedCheckout, valueToSum: totalPrice, parameters: parameters)
     }
     
     func logGenericEvent(args: [String: Any]) {
@@ -123,14 +127,22 @@ public class SwiftFlutterFacebookSdkPlugin: NSObject, FlutterPlugin, FlutterStre
         let valueToSum = args["valueToSum"] as? Double
         let parameters = args["parameters"] as? [String: Any]
         
-        if let valueToSum = valueToSum, let parameters = parameters {
-            AppEvents.logEvent(AppEvents.Name(eventName), valueToSum: valueToSum, parameters: parameters)
-        } else if let parameters = parameters {
-            AppEvents.logEvent(AppEvents.Name(eventName), parameters: parameters)
+        var convertedParams: [AppEvents.ParameterName: Any]?
+        if let parameters = parameters {
+            convertedParams = [:]
+            for (key, value) in parameters {
+                convertedParams?[AppEvents.ParameterName(key)] = value
+            }
+        }
+        
+        if let valueToSum = valueToSum, let convertedParams = convertedParams {
+            AppEvents.shared.logEvent(AppEvents.Name(eventName), valueToSum: valueToSum, parameters: convertedParams)
+        } else if let convertedParams = convertedParams {
+            AppEvents.shared.logEvent(AppEvents.Name(eventName), parameters: convertedParams)
         } else if let valueToSum = valueToSum {
-            AppEvents.logEvent(AppEvents.Name(eventName), valueToSum: valueToSum)
+            AppEvents.shared.logEvent(AppEvents.Name(eventName), valueToSum: valueToSum)
         } else {
-            AppEvents.logEvent(AppEvents.Name(eventName))
+            AppEvents.shared.logEvent(AppEvents.Name(eventName))
         }
     }
     
