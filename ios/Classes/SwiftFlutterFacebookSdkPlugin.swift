@@ -92,12 +92,12 @@ public class SwiftFlutterFacebookSdkPlugin: NSObject, FlutterPlugin, FlutterStre
     }
     
     func logPurchase(amount: Double, currency: String, parameters: [String: Any]) {
-        var convertedParams: [AppEvents.ParameterName: Any] = [:]
-        for (key, value) in parameters {
-            convertedParams[AppEvents.ParameterName(key)] = value
-        }
-        AppEvents.shared.logPurchase(amount, currency: currency, parameters: convertedParams)
+    var convertedParams: [AppEvents.ParameterName: Any] = [:]
+    for (key, value) in parameters {
+        convertedParams[AppEvents.ParameterName(key)] = value
     }
+    AppEvents.shared.logPurchase(amount: amount, currency: currency, parameters: convertedParams)
+}
     
     func logSearchEvent(contentType: String, contentData: String, contentId: String, searchString: String, success: Bool) {
         let parameters: [AppEvents.ParameterName: Any] = [
