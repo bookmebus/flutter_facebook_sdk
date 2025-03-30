@@ -193,26 +193,28 @@ class FlutterFacebookSdkPlugin : FlutterPlugin, MethodCallHandler, StreamHandler
     }
 
     private fun initFbSdk() {
-        FacebookSdk.setAutoInitEnabled(true)
-        FacebookSdk.fullyInitialize()
-        logger = AppEventsLogger.newLogger(context)
+    FacebookSdk.setAutoInitEnabled(true)
+    FacebookSdk.fullyInitialize()
 
-        val targetUri = AppLinks.getTargetUrlFromInboundIntent(context, activityPluginBinding!!.activity.intent)
-        AppLinkData.fetchDeferredAppLinkData(context, object : AppLinkData.CompletionHandler {
+    context?.let { safeContext ->  // Use a safe call to handle null context
+        logger = AppEventsLogger.newLogger(safeContext)
+
+        val targetUri = AppLinks.getTargetUrlFromInboundIntent(safeContext, activityPluginBinding!!.activity.intent)
+
+        AppLinkData.fetchDeferredAppLinkData(safeContext, object : AppLinkData.CompletionHandler {
             override fun onDeferredAppLinkDataFetched(appLinkData: AppLinkData?) {
-
                 if (appLinkData == null) {
-                    return;
+                    return
                 }
 
-                deepLinkUrl = appLinkData.targetUri.toString();
+                deepLinkUrl = appLinkData.targetUri.toString()
                 if (eventSink != null && deepLinkUrl != null) {
                     eventSink!!.success(deepLinkUrl)
                 }
             }
-
         })
     }
+}
 
     private fun createBundleFromMap(parameterMap: Map<String, Any>?): Bundle? {
         if (parameterMap == null) {
@@ -264,7 +266,11 @@ class FlutterFacebookSdkPlugin : FlutterPlugin, MethodCallHandler, StreamHandler
 
     }
 
-    override fun onNewIntent(intent: Intent?): Boolean {
+    override fun onNewIntent(intent: Intent): Boolean {
+        if (intent == null) {
+            return false
+        }
+
         try {
             // some code
             deepLinkUrl = AppLinks.getTargetUrl(intent).toString()
@@ -273,9 +279,6 @@ class FlutterFacebookSdkPlugin : FlutterPlugin, MethodCallHandler, StreamHandler
             // handler
             return false
         }
-
-
-
         return false
     }
 }
